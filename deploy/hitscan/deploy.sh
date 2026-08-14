@@ -13,15 +13,19 @@ if [[ ! -f .env ]]; then
   "$ROOT/deploy/hitscan/prepare-env.sh" "$PUBLIC_HOST"
 fi
 
-"${DOCKER[@]}" compose -f "$BASE" -f "$OVERRIDE" config --quiet
-"${DOCKER[@]}" compose -f "$BASE" -f "$OVERRIDE" up -d --build --remove-orphans
+compose() {
+  "${DOCKER[@]}" compose --env-file "$ROOT/.env" -f "$BASE" -f "$OVERRIDE" "$@"
+}
+
+compose config --quiet
+compose up -d --build --remove-orphans
 
 deadline=$((SECONDS + 180))
 health=""
 until health="$(curl -fsS --max-time 5 http://127.0.0.1:3100/health 2>/dev/null)"; do
   if (( SECONDS >= deadline )); then
-    "${DOCKER[@]}" compose -f "$BASE" -f "$OVERRIDE" ps
-    "${DOCKER[@]}" compose -f "$BASE" -f "$OVERRIDE" logs --tail=120 api worker supervisor
+    compose ps
+    compose logs --tail=120 api worker supervisor
     echo "Rakazo API did not become healthy within 180 seconds." >&2
     exit 1
   fi
@@ -41,6 +45,5 @@ print("API_HEALTH_OK", json.dumps(health, sort_keys=True))
 PY
 
 curl -fsS --max-time 5 http://127.0.0.1:5173/ >/dev/null
-"${DOCKER[@]}" compose -f "$BASE" -f "$OVERRIDE" ps
+compose ps
 echo "RAKAZO_DEPLOY_OK http://${PUBLIC_HOST}:5173"
-
