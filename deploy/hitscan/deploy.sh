@@ -45,5 +45,22 @@ print("API_HEALTH_OK", json.dumps(health, sort_keys=True))
 PY
 
 curl -fsS --max-time 5 http://127.0.0.1:5173/ >/dev/null
+
+# API health alone can pass while the asynchronous worker is crash-looping.
+sleep 5
+for service in postgres supervisor api worker web; do
+  container_id="$(compose ps -q "$service")"
+  if [[ -z "$container_id" ]]; then
+    echo "Missing Compose service: $service" >&2
+    exit 1
+  fi
+  state="$("${DOCKER[@]}" inspect --format '{{.State.Status}}' "$container_id")"
+  if [[ "$state" != "running" ]]; then
+    compose logs --tail=120 "$service"
+    echo "Compose service $service is $state, expected running." >&2
+    exit 1
+  fi
+done
+
 compose ps
 echo "RAKAZO_DEPLOY_OK http://${PUBLIC_HOST}:5173"

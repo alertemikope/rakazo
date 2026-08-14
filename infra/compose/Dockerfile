@@ -3,6 +3,7 @@ RUN corepack enable
 WORKDIR /app
 COPY . .
 RUN pnpm install --frozen-lockfile=false
+RUN pnpm --filter @rakazo/db generate
 # The Vite config validates its runtime proxy secret. The build only emits
 # static client assets, so use an explicit build-only value instead of copying
 # the deployment .env (which is excluded by .dockerignore).
