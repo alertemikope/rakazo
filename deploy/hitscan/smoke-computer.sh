@@ -44,20 +44,27 @@ try {
   }
   computerId = created.id;
 
-  const execResponse = await fetch(`${base}/computers/${computerId}/exec`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      argv: [
-        "bash",
-        "-lc",
-        "test \"$DISPLAY\" = :1 && xdpyinfo >/dev/null && xdotool search --class Chromium >/dev/null && echo COMPUTER_OK",
-      ],
-    }),
-  });
-  const executed = await execResponse.json();
-  if (!execResponse.ok || executed.code !== 0 || !executed.stdout.includes("COMPUTER_OK")) {
-    throw new Error(`computer exec failed: ${JSON.stringify(executed)}`);
+  let executed;
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    const execResponse = await fetch(`${base}/computers/${computerId}/exec`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        argv: [
+          "bash",
+          "-lc",
+          "test \"$DISPLAY\" = :1 && xdpyinfo >/dev/null && xdotool search --class Chromium >/dev/null && echo COMPUTER_OK",
+        ],
+      }),
+    });
+    executed = await execResponse.json();
+    if (execResponse.ok && executed.code === 0 && executed.stdout.includes("COMPUTER_OK")) {
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  if (executed?.code !== 0 || !executed?.stdout?.includes("COMPUTER_OK")) {
+    throw new Error(`computer exec failed after readiness wait: ${JSON.stringify(executed)}`);
   }
 
   let desktopReady = false;
