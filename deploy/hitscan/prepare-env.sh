@@ -67,4 +67,3 @@ PY
 
 echo "Rakazo environment prepared for ${PUBLIC_ORIGIN}"
 echo "Secrets were generated or preserved in $ENV_FILE (mode 600)."
-

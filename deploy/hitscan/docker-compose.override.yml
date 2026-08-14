@@ -13,4 +13,3 @@ services:
 
   web:
     restart: unless-stopped
-
